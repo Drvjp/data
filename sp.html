@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>租期计算器 - 智能扩展日历</title>
+  <style>
+    body {
+      font-family: "Segoe UI", sans-serif;
+      background-color: #f5f7fa;
+      padding: 20px;
+      margin: 0;
+    }
+    h1 {
+      color: #333;
+      text-align: center;
+    }
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 10px;
+      padding: 20px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    .header-info {
+      text-align: center;
+      color: #007bff;
+      font-weight: bold;
+      margin-bottom: 10px;
+    }
+    .controls {
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .controls label {
+      font-weight: bold;
+      color: #555;
+    }
+    .controls input {
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      text-align: center;
+    }
+    .date-input {
+      width: 140px;
+    }
+    .price-input {
+      width: 100px;
+    }
+    .days-input {
+      width: 80px;
+    }
+    .other-fee-input {
+      width: 120px;
+    }
+    .expand-btns {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin-bottom: 15px;
+    }
+    .expand-btns button {
+      padding: 8px 12px;
+      background: #007bff;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    .expand-btns button:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+    .months-container {
+      display: flex;
+      gap: 20px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+    .calendar {
+      width: 300px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+    }
+    .calendar-header {
+      background-color: #007bff;
+      color: white;
+      padding: 10px;
+      text-align: center;
+      font-weight: bold;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .month-title {
+      margin: 0;
+    }
+    .remove-month {
+      background: rgba(255,255,255,0.3);
+      border: none;
+      color: white;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      font-size: 12px;
+      cursor: pointer;
+    }
+    .weekdays {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      background-color: #f1f1f1;
+      padding: 8px 0;
+      font-size: 14px;
+    }
+    .weekdays div {
+      text-align: center;
+      color: #555;
+    }
+    .days {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      padding: 10px;
+      gap: 4px;
+    }
+    .days div {
+      height: 36px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      border-radius: 5px;
+      margin: 2px;
+      font-size: 14px;
+    }
+    .days div:hover {
+      background-color: #e0e0e0;
+    }
+    .days .start {
+      background-color: #007bff;
+      color: white;
+    }
+    .days .end {
+      background-color: #28a745;
+      color: white;
+    }
+    .days .in-range {
+      background-color: #cce5ff;
+    }
+    .days .today {
+      border: 1px solid #007bff;
+    }
+    .result {
+      margin-top: 20px;
+      padding: 15px;
+      background-color: #f8f9fa;
+      border-radius: 8px;
+      font-size: 18px;
+      color: #333;
+      text-align: center;
+      line-height: 1.6;
+    }
+    .total-price {
+      font-weight: bold;
+      color: #d35400;
+      font-size: 20px;
+      margin-top: 8px;
+    }
+    @media (max-width: 1200px) {
+      .calendar { width: calc((100% - 40px) / 3); min-width: 260px; }
+    }
+    @media (max-width: 900px) {
+      .calendar { width: calc((100% - 20px) / 2); }
+    }
+    @media (max-width: 600px) {
+      .calendar { width: 100%; }
+      .controls { flex-direction: column; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header-info" id="currentTime">加载中...</div>
+    <h1>📅 租期计算器 - 智能扩展日历</h1>
+
+    <!-- 控制输入 -->
+    <div class="controls">
+      <div>
+        <label for="startDate">开始日期：</label>
+        <input type="text" id="startDate" class="date-input" placeholder="YYYY-MM-DD" readonly />
+      </div>
+      <div>
+        <label for="rentDays">租期天数：</label>
+        <input type="number" id="rentDays" class="days-input" min="1" placeholder="天" />
+      </div>
+      <div>
+        <label for="endDate">结束日期：</label>
+        <input type="text" id="endDate" class="date-input" placeholder="YYYY-MM-DD" readonly />
+      </div>
+      <div>
+        <label for="dailyRate">每日租金：</label>
+        <input type="number" id="dailyRate" class="price-input" min="0" step="0.01" placeholder="¥" />
+      </div>
+      <div>
+        <label for="otherFee">其他费用：</label>
+        <input type="number" id="otherFee" class="other-fee-input" min="0" step="0.01" placeholder="可选" />
+      </div>
+    </div>
+
+    <!-- 扩展按钮 -->
+    <div class="expand-btns">
+      <button id="addPrev">◀ 添加上一月</button>
+      <button id="addNext">添加下一月 ▶</button>
+    </div>
+
+    <!-- 日历容器 -->
+    <div class="months-container" id="monthsContainer"></div>
+
+    <!-- 结果 -->
+    <div class="result" id="result">
+      请先选择开始日期
+    </div>
+  </div>
+
+  <script>
+    // 元素获取
+    const startDateInput = document.getElementById("startDate");
+    const endDateInput = document.getElementById("endDate");
+    const rentDaysInput = document.getElementById("rentDays");
+    const dailyRateInput = document.getElementById("dailyRate");
+    const otherFeeInput = document.getElementById("otherFee");
+    const resultDiv = document.getElementById("result");
+    const monthsContainer = document.getElementById("monthsContainer");
+    const addPrevBtn = document.getElementById("addPrev");
+    const addNextBtn = document.getElementById("addNext");
+    const currentTimeDiv = document.getElementById("currentTime");
+
+    // 当前显示的月份列表 [{ year, month }, ...]
+    let displayedMonths = [];
+
+    // 当前选中的日期
+    let startDate = null;
+    let endDate = null;
+
+    // 月份名称
+    const monthNames = [
+      "一月", "二月", "三月", "四月", "五月", "六月",
+      "七月", "八月", "九月", "十月", "十一月", "十二月"
+    ];
+
+    // ========== 实时时间显示 ==========
+    function updateCurrentTime() {
+      const today = new Date();
+      const weekdays = ["日", "一", "二", "三", "四", "五", "六"];
+      const formatted = today.toLocaleDateString() +
+        ` 星期${weekdays[today.getDay()]} ` +
+        today.toLocaleTimeString();
+      currentTimeDiv.textContent = "⏰ 当前时间：" + formatted;
+    }
+    setInterval(updateCurrentTime, 1000);
+    updateCurrentTime();
+
+    // ========== 初始化：加载当前月及上下月 ==========
+    function initMonths() {
+      const today = new Date();
+      const year = today.getFullYear();
+      const month = today.getMonth(); // 0-11
+
+      // 上月、本月、下月
+      displayedMonths = [
+        prevMonth(year, month),
+        { year, month },
+        nextMonth(year, month)
+      ];
+      renderCalendars();
+      updateButtons();
+    }
+
+    function prevMonth(year, month) {
+      if (month === 0) return { year: year - 1, month: 11 };
+      return { year, month: month - 1 };
+    }
+
+    function nextMonth(year, month) {
+      if (month === 11) return { year: year + 1, month: 0 };
+      return { year, month: month + 1 };
+    }
+
+    function formatMonthLabel(y, m) {
+      return `${y}年${monthNames[m]}`;
+    }
+
+    // ========== 渲染所有日历 ==========
+    function renderCalendars() {
+      monthsContainer.innerHTML = "";
+      displayedMonths.forEach((item, index) => {
+        const isFirst = index === 0;
+        const isLast = index === displayedMonths.length - 1;
+        const cal = createCalendar(item.year, item.month, isFirst, isLast);
+        monthsContainer.appendChild(cal);
+      });
+    }
+
+    function createCalendar(year, month, isFirst, isLast) {
+      const calendar = document.createElement("div");
+      calendar.className = "calendar";
+
+      // 标题（含删除按钮）
+      const header = document.createElement("div");
+      header.className = "calendar-header";
+      const title = document.createElement("h3");
+      title.className = "month-title";
+      title.textContent = formatMonthLabel(year, month);
+      header.appendChild(title);
+
+      // 删除按钮（只在边缘显示）
+      if (isFirst || isLast) {
+        const removeBtn = document.createElement("button");
+        removeBtn.className = "remove-month";
+        removeBtn.textContent = "×";
+        removeBtn.title = "删除此月";
+        removeBtn.addEventListener("click", () => {
+          if (isFirst) displayedMonths.shift();
+          if (isLast) displayedMonths.pop();
+          renderCalendars();
+          updateButtons();
+        });
+        header.appendChild(removeBtn);
+      }
+
+      // 星期标题
+      const weekdays = document.createElement("div");
+      weekdays.className = "weekdays";
+      ["日", "一", "二", "三", "四", "五", "六"].forEach(d => {
+        const div = document.createElement("div");
+        div.textContent = d;
+        weekdays.appendChild(div);
+      });
+
+      // 日期
+      const days = document.createElement("div");
+      days.className = "days";
+
+      const firstDay = new Date(year, month, 1).getDay();
+      const daysInMonth = new Date(year, month + 1, 0).getDate();
+      const today = new Date();
+
+      for (let i = 0; i < firstDay; i++) {
+        days.appendChild(document.createElement("div"));
+      }
+
+      for (let day = 1; day <= daysInMonth; day++) {
+        const date = new Date(year, month, day);
+        const dayEl = document.createElement("div");
+        dayEl.textContent = day;
+
+        if (date.toDateString() === today.toDateString() && year === today.getFullYear() && month === today.getMonth()) {
+          dayEl.classList.add("today");
+        }
+
+        if (startDate && date.getTime() === startDate.getTime()) {
+          dayEl.classList.add("start");
+        }
+        if (endDate && date.getTime() === endDate.getTime()) {
+          dayEl.classList.add("end");
+        }
+        if (startDate && endDate && date > startDate && date < endDate) {
+          dayEl.classList.add("in-range");
+        }
+
+        dayEl.addEventListener("click", () => {
+          if (!startDate) {
+            startDate = new Date(year, month, day);
+            startDateInput.value = formatDate(startDate);
+            endDate = null;
+            endDateInput.value = "";
+            rentDaysInput.value = "";
+          } else if (!endDate || date.getTime() === startDate.getTime()) {
+            if (date.getTime() === startDate.getTime()) {
+              startDate = null;
+              startDateInput.value = "";
+              endDate = null;
+              endDateInput.value = "";
+              rentDaysInput.value = "";
+            } else {
+              endDate = new Date(year, month, day);
+              if (endDate < startDate) {
+                [startDate, endDate] = [endDate, startDate];
+                startDateInput.value = formatDate(startDate);
+                endDateInput.value = formatDate(endDate);
+              } else {
+                endDateInput.value = formatDate(endDate);
+              }
+              rentDaysInput.value = calculateDays();
+            }
+          } else {
+            startDate = new Date(year, month, day);
+            endDate = null;
+            startDateInput.value = formatDate(startDate);
+            endDateInput.value = "";
+            rentDaysInput.value = "";
+          }
+          renderCalendars();
+          updateResult();
+        });
+
+        days.appendChild(dayEl);
+      }
+
+      calendar.appendChild(header);
+      calendar.appendChild(weekdays);
+      calendar.appendChild(days);
+      return calendar;
+    }
+
+    // ========== 更新扩展按钮状态 ==========
+    function updateButtons() {
+      const first = displayedMonths[0];
+      const last = displayedMonths[displayedMonths.length - 1];
+
+      const prev = prevMonth(first.year, first.month);
+      const next = nextMonth(last.year, last.month);
+
+      // 检查是否已存在
+      const hasPrev = displayedMonths.some(m => m.year === prev.year && m.month === prev.month);
+      const hasNext = displayedMonths.some(m => m.year === next.year && m.month === next.month);
+
+      addPrevBtn.disabled = hasPrev;
+      addNextBtn.disabled = hasNext;
+    }
+
+    // ========== 工具函数 ==========
+    function formatDate(date) {
+      const y = date.getFullYear();
+      const m = String(date.getMonth() + 1).padStart(2, "0");
+      const d = String(date.getDate()).padStart(2, "0");
+      return `${y}-${m}-${d}`;
+    }
+
+    function calculateDays() {
+      if (!startDate || !endDate) return 0;
+      const diff = Math.floor((endDate - startDate) / (1000 * 60 * 60 * 24));
+      return diff + 1; // 含首尾
+    }
+
+    function updateResult() {
+      const days = calculateDays();
+      const rate = parseFloat(dailyRateInput.value) || 0;
+      const otherFee = parseFloat(otherFeeInput.value) || 0;
+      const totalRent = days * rate;
+      const finalTotal = totalRent + otherFee;
+
+      if (startDate && endDate) {
+        resultDiv.innerHTML = `
+          <div>📅 租期：${formatDate(startDate)} 至 ${formatDate(endDate)}</div>
+          <div>📅 共计 <strong>${days} 天</strong>（含首尾）</div>
+          <div>💰 租金：¥${rate.toFixed(2)} × ${days} 天 = <strong>¥${totalRent.toFixed(2)}</strong></div>
+          <div>🔧 其他费用：<strong>¥${otherFee.toFixed(2)}</strong></div>
+          <div class="total-price">✅ 最终总费用：¥${finalTotal.toFixed(2)}</div>
+        `;
+      } else if (startDate) {
+        resultDiv.innerHTML = `已选开始日期：${formatDate(startDate)}<br>请选择结束日期或输入租期天数`;
+      } else {
+        resultDiv.textContent = "请先选择开始日期";
+      }
+    }
+
+    // ========== 事件监听 ==========
+    addPrevBtn.addEventListener("click", () => {
+      const first = displayedMonths[0];
+      const prev = prevMonth(first.year, first.month);
+      displayedMonths.unshift(prev);
+      renderCalendars();
+      updateButtons();
+    });
+
+    addNextBtn.addEventListener("click", () => {
+      const last = displayedMonths[displayedMonths.length - 1];
+      const next = nextMonth(last.year, last.month);
+      displayedMonths.push(next);
+      renderCalendars();
+      updateButtons();
+    });
+
+    rentDaysInput.addEventListener("input", () => {
+      if (!startDate || !rentDaysInput.value) return;
+      const days = parseInt(rentDaysInput.value);
+      if (isNaN(days) || days < 1) return;
+      endDate = new Date(startDate);
+      endDate.setDate(startDate.getDate() + days - 1);
+      endDateInput.value = formatDate(endDate);
+      updateResult();
+      renderCalendars();
+    });
+
+    dailyRateInput.addEventListener("input", updateResult);
+    otherFeeInput.addEventListener("input", updateResult);
+
+    // ========== 初始化 ==========
+    initMonths();
+    updateResult();
+  </script>
+</body>
+</html>
